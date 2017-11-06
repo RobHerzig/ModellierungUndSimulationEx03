@@ -1,5 +1,10 @@
 package study;
 
+import simulation.lib.counter.DiscreteConfidenceCounter;
+import simulation.lib.randVars.continous.Normal;
+import simulation.lib.rng.RNG;
+import simulation.lib.rng.StdRNG;
+
 /*
  * TODO Problem 3.1.3 and 3.1.4 - implement this class
  */
@@ -10,6 +15,45 @@ public class DCCTest {
     }
 
     public static void testDCC() {
-        // TODO Auto-generated method stub
+        DiscreteConfidenceCounter counter = new DiscreteConfidenceCounter("TESTERINO");
+        StdRNG rng = new StdRNG(System.currentTimeMillis());
+        
+//        for(int i = 0; i < 100; i++) {
+//        	counter.count(rng.rnd() * 10);
+//        }
+        
+        Normal n = new Normal(rng);
+        
+        double mean = 10;
+        double[] cVars = new double[]{0.25, 0.5, 1, 2, 4};
+        int[] sampleSizes = new int[]{5, 10, 50, 100};
+        double[]alphas = new double[]{0.05, 0.025}; //two-sided means half the alphas?! not sure TODO:
+        
+        for (double a : alphas) {
+        	counter.setAlpha(alphas[0]);
+        	for (double cv : cVars) {
+				n.setMeanAndCvar(mean, cv);
+				for (int sam : sampleSizes) {
+					int meanCorrectCounter = 0;
+					for(int exp = 0; exp < 500; exp++) {
+						counter.reset();
+						for(int i = 0; i < sam; i++) {
+				        	double rv = n.getRV();
+				        	counter.count(rv);
+				        }
+						if(mean <= counter.getUpperBound() && mean >= counter.getLowerBound()) {
+//							System.out.println("LOWER: " + counter.getLowerBound() + " MEAN: " + counter.getMean() + " UPPER: " + counter.getUpperBound());
+							meanCorrectCounter++;
+						}
+						
+//						System.out.println("t for alpha = "+a+", sampleSize = "+sam+", cVar = "+ cv + ", mean = 10 -> " +  counter.getT(sam));
+//						System.out.println(counter.report());
+					}
+					double fraction = (double)meanCorrectCounter/500d;
+					System.out.println("A fraction of " +fraction + " had a mean in bounds with parameters:");
+					System.out.println("alpha = "+a+", sampleSize = "+sam+", cVar = "+ cv + ", mean = 10  and t is:" +  counter.getT(sam));					
+				}
+			}
+		}
     }
 }

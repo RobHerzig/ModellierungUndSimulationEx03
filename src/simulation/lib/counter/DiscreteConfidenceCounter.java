@@ -40,34 +40,65 @@ public class DiscreteConfidenceCounter extends DiscreteCounter{
 	}
 	
     
-    private double getAlpha() {
+    public double getAlpha() {
 		return alpha;
 	}
 
-	private void setAlpha(double alpha) {
+	public void setAlpha(double alpha) {
 		this.alpha = alpha;
 	}
 	
-	public double getZ(long numSamples){
-		
+	
+	/*
+	 *  Row 2: alpha 0.01
+     *  Row 3: alpha 0.05
+     *  Row 4: alpha 0.10
+	 */
+	int getRow() {
 		//choose row in which to look for the value (in our t table)
-		int row = 1; //if alpha < 0.05 -> stays at last row in matrix
+		int row = 3; //if alpha < 0.05 -> stays at last row in matrix
 		//otherwise: below 0.1 -> second row, else first row
 		if (alpha < 0.05){
-			row = 3;
+			row = 1;
 		}else if (alpha < 0.1){
 			row = 2;
 		}
+		return row;
+	}
+	
+	public double getLowerBound(){
+		return getMean() - getT(getNumSamples()) * Math.sqrt(getVariance()/getNumSamples());
+	}
+
+	public double getUpperBound(){		
+		return getMean() + getT(getNumSamples()) * Math.sqrt(getVariance()/getNumSamples());
+	}
+
+	public double getBound(){
+		return getUpperBound() - getLowerBound();
+	}
+	
+	//SEE 4.4!
+	public double getT(long degsOfFreedom){
+		
+		int row = getRow();
+		
+//		System.out.println("PARAMETERS GET T: " + degsOfFreedom);
 		
 		//initialize high and low x
 		int xHigh = tAlphaMatrix[0].length -1;
 		int xLow = tAlphaMatrix[0].length -1;
 		
+		//degsOfFreedom is out of values range -> choose maximum number 
+		if(degsOfFreedom > tAlphaMatrix[0][tAlphaMatrix[0].length-1]) {
+			return tAlphaMatrix[row][tAlphaMatrix[0].length-1];
+		}
+		
 		for(int i = 0; i < tAlphaMatrix[0].length; i++){
-			if(numSamples > tAlphaMatrix[0][i]) 
-				continue;
-			else if(numSamples == tAlphaMatrix[0][i]) 
-				return tAlphaMatrix[row][i];
+			if(degsOfFreedom > tAlphaMatrix[0][i]) 
+				continue; //value still too low
+			else if(degsOfFreedom == tAlphaMatrix[0][i]) 
+				return tAlphaMatrix[row][i]; //exact value found in table
 			
 			//between two values, set higher and lower one
 			xHigh = i;
@@ -77,21 +108,23 @@ public class DiscreteConfidenceCounter extends DiscreteCounter{
 
 		if (xLow == xHigh) 
 			return tAlphaMatrix[row][xLow];
-
-		return linearInterpolation(tAlphaMatrix[0][xLow], tAlphaMatrix[0][xHigh], tAlphaMatrix[row][xLow],tAlphaMatrix[row][xHigh], numSamples);
+		else {
+			return linearInterpol(tAlphaMatrix[0][xLow], tAlphaMatrix[0][xHigh], 
+					tAlphaMatrix[row][xLow],tAlphaMatrix[row][xHigh], degsOfFreedom);
+		}
 	}
 	
-	//TODO: Implement this
-	private double linearInterpolation(double nlow, double nhigh, double zlow, 
-			double zhigh, long numSamples){
-		return zlow + ((zhigh - zlow)/(nhigh -nlow)) * (numSamples - nlow);
+	//Interpolate linearly between two values that we are in between
+	private double linearInterpol(double nlow, double nhigh, double zlow, double zhigh, long numSamples){
+		double interpolatedValue = zlow + ((zhigh - zlow)/(nhigh -nlow)) * (numSamples - nlow);
+		return interpolatedValue;
 	}
             
     /**
      * @see Counter#report()
      * Uncomment this function when you have implemented this class for reporting.
      */
-    /*@Override
+    @Override
     public String report() {
         String out = super.report();
         out += ("" + "\talpha = " + alpha + "\n" +
@@ -99,19 +132,19 @@ public class DiscreteConfidenceCounter extends DiscreteCounter{
                 "\tlower bound = " + getLowerBound() + "\n" +
                 "\tupper bound = " + getUpperBound());
         return out;
-    }*/
+    }
 
     /**
      * @see Counter#csvReport(String)
      * Uncomment this function when you have implemented this class for reporting.
      */
-    /*@Override
+    @Override
     public void csvReport(String outputdir) {
         String content = observedVariable + ";" + getNumSamples() + ";" + getMean() + ";" + getVariance() + ";" + getStdDeviation() + ";" +
                 getCvar() + ";" + getMin() + ";" + getMax() + ";" + alpha + ";" + getT(getNumSamples() - 1) + ";" + getLowerBound() + ";" +
                 getUpperBound() + "\n";
         String labels = "#counter ; numSamples ; MEAN; VAR; STD; CVAR; MIN; MAX;alpha;t(1-alpha/2);lowerBound;upperBound\n";
         writeCsv(outputdir, content, labels);
-    }*/
+    }
 
 }
